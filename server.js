@@ -2,6 +2,7 @@ require("dotenv").config();
 var http = require("http");
 var express = require("express");
 var path = require("path");
+var util = require("util");
 
 const trainApiKey = process.env.CTA_TRAIN_API_KEY;
 const busApiKey = process.env.CTA_BUS_API_KEY;
@@ -35,33 +36,30 @@ let trainStations = ["40350"];
 let location = "Chicago";
 
 function getBus() {
+	// for (let stop of busStops) {
+	// 	getFromUrl("http://ctabustracker.com/bustime/api/v2/getpredictions?key="+busApiKey+"&stpid="+stop+"&format=json")
+	// 		.then((result) => {
+
+	// 		});
+	// }
 	for (let i=0;i<busStops.length;i++) {
 		let busUrl="http://ctabustracker.com/bustime/api/v2/getpredictions?key="+busApiKey+"&stpid="+busStops[i]+"&format=json";
-		let busRoute = [];
-		let busStopName = [];
-		let busDirection = [];
-		let busPredictedTime = [];
-		let busTimeStamp = [];
 		let busExport = [];
 		getFromUrl(busUrl).then((result) => {
 			let busJson = JSON.parse(result)["bustime-response"];
+			//console.log(busJson);
 			if (busJson.hasOwnProperty("error")) {
 				// TODO
 				console.log("Error response on bus " + busStops[i]);
 				return;
 			}
 			for (let j=0;j<busJson["prd"].length;j++) {
-				busRoute[j] = busJson["prd"][j]["rt"];
-				busStopName[j] = busJson["prd"][j]["stpnm"];
-				busDirection[j] = busJson["prd"][j]["rtdir"]; 
-				busPredictedTime[j] = busJson["prd"][j]["prdtm"].split(" ")[j];
-				busTimeStamp[j] = busJson["prd"][j]["tmstmp"].split(" ")[j];
 				let data = {
-					stop: busStopName[j],
-					route: busRoute[j],
-					dir: busDirection[j],
-					prdtm: busPredictedTime[j],
-					tmstmp: busTimeStamp[j],
+					stop: busJson["prd"][j]["rt"],
+					route: busJson["prd"][j]["stpnm"],
+					dir: busJson["prd"][j]["rtdir"], 
+					prdtm: busJson["prd"][j]["prdtm"].split(" ")[1],
+					tmstmp: busJson["prd"][j]["tmstmp"].split(" ")[1],
 				};
 				busExport.push(data);
 			}
@@ -141,6 +139,7 @@ function getData() {
 	getTrain();
 	getWeather();
 	setTimeout(() => {
+		console.log(util.inspect(o,false,null));
 		o[busKey] = [];
 		o[trainKey] = [];
 		o[weatherKey] = [];
@@ -171,6 +170,9 @@ app.get("/api/bus", function(req, res) {
 	busStops = bus.split(",");
 	res.send(o[busKey]);
 });
+
+app.get("/api/bus/:busnum", function(req, res) {});
+
 app.get("/api/train", function(req, res) {
 	let train = req.query.train;
 	trainStations = train.split(",");
